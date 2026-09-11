@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <!-- Makes the website work properly on phones -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Iron Man</title>
+
+    <!-- Google Model Viewer -->
+    <script type="module"
+        src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js">
+    </script>
+
+    <style>
+        body {
+            margin: 0;
+            background: #080808;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        h1 {
+            margin-top: 30px;
+            color: #ffcc00;
+            font-size: 40px;
+        }
+
+        model-viewer {
+            width: 100%;
+            height: 500px;
+            background: #111111;
+        }
+
+        .button {
+            display: inline-block;
+            margin: 30px;
+            padding: 15px 30px;
+            background: #e62429;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>IRON MAN</h1>
+
+    <!-- YOUR IRON MAN 3D MODEL -->
+    <model-viewer
+        src="iron_man.glb"
+        camera-controls
+        auto-rotate
+        shadow-intensity="1"
+        alt="Iron Man 3D Model">
+    </model-viewer>
+
+    <!-- LINK BACK TO AVENGERS PAGE -->
+    <a href="index.html" class="button">
+        Back to Avengers
+    </a>
+
+</body>
+</html>
