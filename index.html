@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Iron Man 3D</title>
+    <title>Avengers 3D</title>
 
     <link rel="stylesheet" href="style.css">
 
@@ -40,7 +40,31 @@
                 exposure="1">
             </model-viewer>
         </div>
+        <nav>
+            <h2>Captain America</h2>
+  </nav>
 
+    <section class="hero">
+
+        <div class="text">
+            <h1>Captain America</h1>
+            <p>Explore the Captain America 3D Model</p>
+
+            <button onclick="document.querySelector('model-viewer').cameraOrbit = '0deg 75deg 3m'">
+                View Model
+            </button>
+        </div>
+
+        <div class="model">
+            <model-viewer
+                src="iron_man.glb"
+                alt="Captain America 3D Model"
+                camera-controls
+                auto-rotate
+                shadow-intensity="1"
+                exposure="1">
+            </model-viewer>
+        </div>
     </section>
 
 </body>
