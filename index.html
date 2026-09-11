@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Iron Man 3D</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <script type="module"
+        src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js">
+    </script>
+</head>
+
+<body>
+
+    <nav>
+        <h2>IRON MAN</h2>
+    </nav>
+
+    <section class="hero">
+
+        <div class="text">
+            <h1>IRON MAN</h1>
+            <p>Explore the Iron Man 3D Model</p>
+
+            <button onclick="document.querySelector('model-viewer').cameraOrbit = '0deg 75deg 3m'">
+                View Model
+            </button>
+        </div>
+
+        <div class="model">
+            <model-viewer
+                src="models/iron_man.glb"
+                alt="Iron Man 3D Model"
+                camera-controls
+                auto-rotate
+                shadow-intensity="1"
+                exposure="1">
+            </model-viewer>
+        </div>
+
+    </section>
+
+</body>
+</html>
