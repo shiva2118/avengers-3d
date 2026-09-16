@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Bottle Shooter</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body { background: #1a1a2e; color: #fff; font-family: system-ui, sans-serif; text-align: center; overflow: hidden; }
+        canvas { background: #16213e; display: block; margin: 0 auto; touch-action: none; cursor: crosshair; }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+    canvas.width = Math.min(window.innerWidth, 450);
+    canvas.height = Math.min(window.innerHeight, 800);
+}
+window.addEventListener("resize", resize);
+resize();
+
+let score = 0;
+let timeLeft = 30;
+let gameOver = false;
+let bottles = [];
+
+class Bottle {
+    constructor() {
+        this.w = 40;
+        this.h = 80;
+        this.x = Math.random() * (canvas.width - this.w);
+        this.y = canvas.height;
+        this.speedY = -(Math.random() * 4 + 8);
+        this.speedX = (Math.random() - 0.5) * 4;
+        this.color = "#00fff5";
+    }
+
+    update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        this.speedY += 0.18; // Gravity
+    }
+
+    draw() {
+        ctx.fillStyle = this.color;
+        // Bottle Base
+        ctx.fillRect(this.x, this.y + 20, this.w, this.h - 20);
+        // Bottle Neck
+        ctx.fillRect(this.x + 12, this.y, 16, 20);
+        // Cap
+        ctx.fillStyle = "#ff4757";
+        ctx.fillRect(this.x + 14, this.y - 4, 12, 4);
+    }
+}
+
+function spawnBottle() {
+    if (!gameOver) {
+        bottles.push(new Bottle());
+        setTimeout(spawnBottle, Math.random() * 700 + 400);
+    }
+}
+
+function shoot(e) {
+    if (gameOver) {
+        resetGame();
+        return;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const clickX = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const clickY = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+
+    bottles.forEach((b, index) => {
+        if (clickX >= b.x && clickX <= b.x + b.w && clickY >= b.y && clickY <= b.y + b.h) {
+            score += 10;
+            bottles.splice(index, 1);
+        }
+    });
+}
+
+canvas.addEventListener("mousedown", shoot);
+canvas.addEventListener("touchstart", shoot);
+
+function resetGame() {
+    score = 0;
+    timeLeft = 30;
+    gameOver = false;
+    bottles = [];
+    spawnBottle();
+}
+
+setInterval(() => {
+    if (!gameOver && timeLeft > 0) {
+        timeLeft--;
+        if (timeLeft === 0) gameOver = true;
+    }
+}, 1000);
+
+function update() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!gameOver) {
+        bottles.forEach((b, i) => {
+            b.update();
+            b.draw();
+            if (b.y > canvas.height + 100) bottles.splice(i, 1);
+        });
+
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 20px sans-serif";
+        ctx.fillText(`Score: ${score}`, 20, 40);
+        ctx.fillText(`Time: ${timeLeft}s`, canvas.width - 120, 40);
+    } else {
+        ctx.fillStyle = "#ff4757";
+        ctx.font = "bold 32px sans-serif";
+        ctx.fillText("GAME OVER", canvas.width / 2 - 95, canvas.height / 2 - 20);
+        ctx.fillStyle = "#fff";
+        ctx.font = "20px sans-serif";
+        ctx.fillText(`Final Score: ${score}`, canvas.width / 2 - 65, canvas.height / 2 + 20);
+        ctx.fillStyle = "#00fff5";
+        ctx.fillText("Click/Tap to Play Again", canvas.width / 2 - 100, canvas.height / 2 + 65);
+    }
+
+    requestAnimationFrame(update);
+}
+
+spawnBottle();
+update();
+</script>
+</body>
+</html>
