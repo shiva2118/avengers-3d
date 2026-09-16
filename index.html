@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Knife Hit Playable</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body { background: #1a1a2e; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: sans-serif; }
+    canvas { background: #16213e; max-width: 100%; max-height: 100vh; }
+  </style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="400" height="700"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// Game Configuration & State
+let currentLevel = 0;
+let score = 0;
+let gameState = 'START'; // START, PLAYING, LEVEL_CLEAR, GAME_OVER
+
+const levels = [
+  { knivesToThrow: 5, speed: 0.02, initialKnives: [] },
+  { knivesToThrow: 6, speed: 0.035, initialKnives: [0] },
+  { knivesToThrow: 7, speed: -0.04, initialKnives: [0, Math.PI / 2] },
+  { knivesToThrow: 8, speed: 0.05, initialKnives: [0, Math.PI, Math.PI * 1.5] }
+];
+
+const target = { x: 200, y: 220, radius: 70 };
+let currentTargetAngle = 0;
+let knivesInTarget = [];
+let remainingKnives = 0;
+
+let flyingKnife = null;
+const knifeDimensions = { width: 10, height: 50 };
+const knifeStartY = 600;
+
+// Setup Level
+function loadLevel(levelIndex) {
+  const lvl = levels[levelIndex % levels.length];
+  remainingKnives = lvl.knivesToThrow;
+  knivesInTarget = [...lvl.initialKnives];
+  currentTargetAngle = 0;
+  flyingKnife = null;
+}
+
+// Draw Target
+function drawTarget() {
+  ctx.save();
+  ctx.translate(target.x, target.y);
+  ctx.rotate(currentTargetAngle);
+
+  // Target Body
+  ctx.fillStyle = '#e94560';
+  ctx.beginPath();
+  ctx.arc(0, 0, target.radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Inner Ring
+  ctx.fillStyle = '#0f3460';
+  ctx.beginPath();
+  ctx.arc(0, 0, target.radius * 0.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Draw Stuck Knives
+  knivesInTarget.forEach(angle => {
+    ctx.save();
+    ctx.rotate(angle);
+    ctx.fillStyle = '#dcdde1';
+    ctx.fillRect(-knifeDimensions.width / 2, target.radius - 10, knifeDimensions.width, knifeDimensions.height);
+    ctx.restore();
+  });
+
+  ctx.restore();
+}
+
+// Draw Knife ready to throw or currently in flight
+function drawKnives() {
+  // Flying Knife
+  if (flyingKnife) {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(flyingKnife.x - knifeDimensions.width / 2, flyingKnife.y, knifeDimensions.width, knifeDimensions.height);
+  } else if (remainingKnives > 0 && gameState === 'PLAYING') {
+    // Ready Knife
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(target.x - knifeDimensions.width / 2, knifeStartY, knifeDimensions.width, knifeDimensions.height);
+  }
+}
+
+// Draw UI (Score, Level, Remaining Knives)
+function drawUI() {
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '20px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(`LEVEL ${currentLevel + 1}`, 20, 40);
+  ctx.fillText(`SCORE: ${score}`, 20, 70);
+
+  // Remaining Knives Counter
+  for (let i = 0; i < remainingKnives; i++) {
+    ctx.fillStyle = flyingKnife ? '#555' : '#ffffff';
+    ctx.fillRect(20 + i * 15, 660, 8, 20);
+  }
+
+  // Overlay Messages
+  ctx.textAlign = 'center';
+  if (gameState === 'START') {
+    ctx.font = '28px sans-serif';
+    ctx.fillText('TAP TO START', canvas.width / 2, 450);
+  } else if (gameState === 'GAME_OVER') {
+    ctx.fillStyle = '#e94560';
+    ctx.font = '36px sans-serif';
+    ctx.fillText('GAME OVER', canvas.width / 2, 430);
+    ctx.fillStyle = '#fff';
+    ctx.font = '20px sans-serif';
+    ctx.fillText('Tap to Restart', canvas.width / 2, 470);
+  } else if (gameState === 'LEVEL_CLEAR') {
+    ctx.fillStyle = '#4ecc71';
+    ctx.font = '32px sans-serif';
+    ctx.fillText('LEVEL STAGE CLEAR!', canvas.width / 2, 450);
+  }
+}
+
+// Throw Action
+function throwKnife() {
+  if (gameState === 'START') {
+    gameState = 'PLAYING';
+    loadLevel(currentLevel);
+    return;
+  }
+  if (gameState === 'GAME_OVER') {
+    score = 0;
+    currentLevel = 0;
+    gameState = 'PLAYING';
+    loadLevel(currentLevel);
+    return;
+  }
+  if (gameState === 'LEVEL_CLEAR') {
+    currentLevel++;
+    gameState = 'PLAYING';
+    loadLevel(currentLevel);
+    return;
+  }
+
+  if (gameState === 'PLAYING' && !flyingKnife && remainingKnives > 0) {
+    flyingKnife = { x: target.x, y: knifeStartY, speed: 35 };
+    remainingKnives--;
+  }
+}
+
+// Update Game Physics
+function update() {
+  if (gameState === 'PLAYING') {
+    const lvl = levels[currentLevel % levels.length];
+    currentTargetAngle += lvl.speed;
+
+    if (flyingKnife) {
+      flyingKnife.y -= flyingKnife.speed;
+
+      // Check collision with target boundary
+      if (flyingKnife.y <= target.y + target.radius) {
+        // Calculate hit angle relative to target rotation
+        const hitAngle = (Math.PI / 2 - currentTargetAngle) % (Math.PI * 2);
+        const normalizedHitAngle = (hitAngle + Math.PI * 2) % (Math.PI * 2);
+
+        // Collision Check with existing knives
+        const minDistance = 0.25; // radians threshold (~14 degrees)
+        let crashed = knivesInTarget.some(angle => {
+          const normAngle = (angle + Math.PI * 2) % (Math.PI * 2);
+          const diff = Math.abs(normAngle - normalizedHitAngle);
+          return Math.min(diff, Math.PI * 2 - diff) < minDistance;
+        });
+
+        if (crashed) {
+          gameState = 'GAME_OVER';
+        } else {
+          knivesInTarget.push(normalizedHitAngle);
+          score += 10;
+          flyingKnife = null;
+
+          if (remainingKnives === 0) {
+            gameState = 'LEVEL_CLEAR';
+            setTimeout(() => {
+              if (gameState === 'LEVEL_CLEAR') {
+                currentLevel++;
+                loadLevel(currentLevel);
+                gameState = 'PLAYING';
+              }
+            }, 1000);
+          }
+        }
+      }
+    }
+  }
+}
+
+// Render Loop
+function loop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  update();
+  drawTarget();
+  drawKnives();
+  drawUI();
+  requestAnimationFrame(loop);
+}
+
+// Event Listeners for Touch/Click
+window.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  throwKnife();
+});
+
+// Initialization
+loadLevel(currentLevel);
+loop();
+</script>
+</body>
+</html>
