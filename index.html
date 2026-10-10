@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Sync App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #121212;
+            color: white;
+            margin-top: 30px;
+            padding: 10px;
+        }
+        .card {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 12px;
+            margin: 15px auto;
+            max-width: 450px;
+        }
+        input, button {
+            padding: 10px 15px;
+            font-size: 16px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border: none;
+        }
+        input {
+            width: 75%;
+        }
+        button {
+            background-color: #FF0000;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #cc0000;
+        }
+        #status {
+            font-weight: bold;
+            color: #1ed760;
+            margin-top: 10px;
+        }
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%;
+            height: 0;
+            margin-top: 15px;
+        }
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+        }
+    </style>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+</head>
+<body>
+
+    <h1>YouTube Sync</h1>
+    <p id="status">Connecting to network...</p>
+
+    <div class="card" id="hostSection" style="display:none;">
+        <h3>Host a Session</h3>
+        <p>Room ID: <span id="my-peer-id" style="color: #1DB954; font-weight: bold;">Generating...</span></p>
+        <p id="memberCount">Connected Members: 1 / 5</p>
+        
+        <input type="text" id="ytUrlInput" placeholder="Paste YouTube Video URL">
+        <button id="loadVideoBtn">Load Video</button>
+
+        <div class="video-container">
+            <div id="hostYTPlayer"></div>
+        </div>
+    </div>
+
+    <div class="card" id="joinSection">
+        <h3>Join a Session</h3>
+        <input type="text" id="joinIdInput" placeholder="Enter Host Room ID"><br>
+        <button id="joinBtn" style="background-color: #1DB954;">Connect to Host</button>
+    </div>
+
+    <div class="card" id="clientSection" style="display:none;">
+        <h3>Joined Room</h3>
+        <p id="clientStatus">Waiting for host to load video...</p>
+        <div class="video-container">
+            <div id="clientYTPlayer"></div>
+        </div>
+    </div>
+
+    <script>
+        const statusEl = document.getElementById('status');
+        const hostSection = document.getElementById('hostSection');
+        const joinSection = document.getElementById('joinSection');
+        const clientSection = document.getElementById('clientSection');
+        const myPeerIdEl = document.getElementById('my-peer-id');
+        const memberCountEl = document.getElementById('memberCount');
+        const joinIdInput = document.getElementById('joinIdInput');
+        const joinBtn = document.getElementById('joinBtn');
+        const ytUrlInput = document.getElementById('ytUrlInput');
+        const loadVideoBtn = document.getElementById('loadVideoBtn');
+        const clientStatus = document.getElementById('clientStatus');
+
+        let peer = new Peer();
+        let connectedClients = [];
+        let conn = null;
+        const MAX_MEMBERS = 5;
+        let currentVideoId = "";
+        let hostPlayer, clientPlayer;
+        let isSyncing = false;
+
+        peer.on('open', (id) => {
+            statusEl.innerText = "Connected! Choose an option below:";
+            myPeerIdEl.innerText = id;
+            hostSection.style.display = 'block';
+        });
+
+        window.onYouTubeIframeAPIReady = function() {
+            hostPlayer = new YT.Player('hostYTPlayer', {
+                height: '100%',
+                width: '100%',
+                videoId: '',
+                events: { 'onStateChange': onHostStateChange }
+            });
+
+            clientPlayer = new YT.Player('clientYTPlayer', {
+                height: '100%',
+                width: '100%',
+                videoId: ''
+            });
+        };
+
+        function extractVideoId(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        loadVideoBtn.addEventListener('click', () => {
+            const url = ytUrlInput.value.trim();
+            const videoId = extractVideoId(url);
+            if (!videoId) {
+                alert('Please enter a valid YouTube URL');
+                return;
+            }
+            currentVideoId = videoId;
+            hostPlayer.loadVideoById(videoId);
+            statusEl.innerText = "Video loaded and broadcasting!";
+            broadcast({ type: 'load-video', videoId: videoId });
+        });
+
+        function onHostStateChange(event) {
+            if (isSyncing) return;
+            const currentTime = hostPlayer.getCurrentTime();
+            if (event.data === YT.PlayerState.PLAYING) {
+                broadcast({ type: 'play', currentTime: currentTime });
+            } else if (event.data === YT.PlayerState.PAUSED) {
+                broadcast({ type: 'pause', currentTime: currentTime });
+            }
+        }
+
+        peer.on('connection', (connection) => {
+            if (connectedClients.length >= MAX_MEMBERS - 1) {
+                connection.on('open', () => {
+                    connection.send({ type: 'error', message: 'Room is full! Maximum 5 members allowed.' });
+                    setTimeout(() => connection.close(), 500);
+                });
+                return;
+            }
+
+            connectedClients.push(connection);
+            updateMemberCount();
+            statusEl.innerText = "A new device has joined your room!";
+
+            if (currentVideoId) {
+                connection.on('open', () => {
+                    connection.send({ type: 'load-video', videoId: currentVideoId });
+                });
+            }
+
+            connection.on('close', () => {
+                connectedClients = connectedClients.filter(c => c !== connection);
+                updateMemberCount();
+            });
+        });
+
+        function updateMemberCount() {
+            const totalMembers = connectedClients.length + 1;
+            memberCountEl.innerText = `Connected Members: ${totalMembers} / ${MAX_MEMBERS}`;
+        }
+
+        joinBtn.addEventListener('click', () => {
+            const hostId = joinIdInput.value.trim();
+            if (!hostId) {
+                alert('Please enter a valid Host Room ID');
+                return;
+            }
+            
+            statusEl.innerText = "Connecting to host...";
+            conn = peer.connect(hostId);
+
+            conn.on('open', () => {
+                statusEl.innerText = "Connected to Host successfully!";
+                joinSection.style.display = 'none';
+                clientSection.style.display = 'block';
+            });
+
+            conn.on('data', (data) => {
+                if (data.type === 'error') {
+                    alert(data.message);
+                    statusEl.innerText = data.message;
+                    window.location.reload();
+                } else {
+                    handleClientData(data);
+                }
+            });
+        });
+
+        function broadcast(data) {
+            connectedClients.forEach(client => {
+                client.send(data);
+            });
+        }
+
+        function handleClientData(data) {
+            isSyncing = true;
+            if (data.type === 'load-video') {
+                currentVideoId = data.videoId;
+                clientPlayer.loadVideoById(data.videoId);
+                clientStatus.innerText = "Video loaded from host!";
+            } else if (data.type === 'play') {
+                clientPlayer.seekTo(data.currentTime, true);
+                clientPlayer.playVideo();
+                clientStatus.innerText = "Playing in sync with sound!";
+            } else if (data.type === 'pause') {
+                clientPlayer.seekTo(data.currentTime, true);
+                clientPlayer.pauseVideo();
+                clientStatus.innerText = "Paused by host.";
+            }
+            setTimeout(() => { isSyncing = false; }, 500);
+        }
+    </script>
+
+</body>
+</html>
