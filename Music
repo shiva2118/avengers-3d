@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Sync App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #121212;
+            color: white;
+            margin-top: 50px;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 18px;
+            background-color: #1DB954;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #1ed760;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Music Sync</h1>
+    <p>Host or join a synchronized music session!</p>
+
+    <div>
+        <button id="playBtn">Play Music</button>
+    </div>
+
+    <script>
+        document.getElementById('playBtn').addEventListener('click', () => {
+            alert('Button clicked! Next we will hook up audio and syncing.');
+        });
+    </script>
+
+</body>
+</html>
