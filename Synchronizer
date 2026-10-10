@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Sync App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #121212;
+            color: white;
+            margin-top: 50px;
+            padding: 20px;
+        }
+        input[type="file"] {
+            margin: 20px 0;
+            color: white;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 18px;
+            background-color: #1DB954;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #1ed760;
+        }
+        audio {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Music Sync</h1>
+    <p>Select a local song file from your device:</p>
+
+    <!-- File input to pick an MP3/audio file -->
+    <input type="file" id="audioUpload" accept="audio/*">
+    <br>
+    
+    <!-- Audio player element -->
+    <audio id="audioPlayer" controls></audio>
+
+    <script>
+        const audioUpload = document.getElementById('audioUpload');
+        const audioPlayer = document.getElementById('audioPlayer');
+
+        // When a user selects a file, load it into the audio player
+        audioUpload.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const fileURL = URL.createObjectURL(file);
+                audioPlayer.src = fileURL;
+                audioPlayer.load();
+                alert('Song loaded! You can now press play.');
+            }
+        });
+    </script>
+
+</body>
+</html>
